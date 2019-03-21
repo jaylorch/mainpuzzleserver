@@ -40,6 +40,14 @@ namespace ServerCore
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // Add a policy that can be used by a controller that wants to allow cross-origin requests.
+            services.AddCors(o => o.AddPolicy("EnableAllOriginsPolicy", builder =>
+            {
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            }));
+
             services.AddMvc(config =>
             {
                 var policy = new AuthorizationPolicyBuilder()
@@ -97,7 +105,6 @@ namespace ServerCore
             services.AddScoped<IAuthorizationHandler, IsRegisteredForEventHandler_Admin>();
             services.AddScoped<IAuthorizationHandler, IsRegisteredForEventHandler_Author>();
             services.AddScoped<IAuthorizationHandler, IsRegisteredForEventHandler_Player>();
-
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -125,6 +132,8 @@ namespace ServerCore
                 app.UseExceptionHandler("/Error");
                 app.UseHsts();
             }
+
+            app.UseCors();
 
             app.UseHttpsRedirection();
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
@@ -152,7 +153,7 @@ namespace ServerCore.Pages
                 errors.Add(newError);
             }
 
-            public void SetSiteVersion(string siteVersion)
+            public void SetSiteVersion(int siteVersion)
             {
                 response["site_version"] = siteVersion;
             }
@@ -189,23 +190,6 @@ namespace ServerCore.Pages
         public SyncHelper(PuzzleServerContext i_context)
         {
             context = i_context;
-        }
-
-        /// <summary>
-        ///   Sometimes, an author finds a bug in a puzzle page and would like that puzzle page to
-        ///   reload itself to get the changes.  If that puzzle page periodically invokes the sync
-        ///   API, the sync API provides a way to achieve this.  The sync response indicates the
-        ///   current "version" of the puzzle, essentially telling the requesting page to reload
-        ///   itself if it's different from the last time it found out the version.
-        ///
-        ///   So, the point of GetSiteVersion is to return a string that changes with every update
-        ///   to the page of the corresponding puzzle.
-        /// </summary>
-        private string GetSiteVersion(Puzzle puzzle)
-        {
-            // if (puzzle.ID == 8) { return "2" };   // use a line like this to indicate a puzzle-specific version
-            // if (puzzle.ID == 97) { return "3" };  // use a line like this to indicate a puzzle-specific version
-            return "1";
         }
 
         /// <summary>
@@ -432,10 +416,10 @@ namespace ServerCore.Pages
                 return response.GetResult();
             }
 
-            // Get the site version for this puzzle, so that if it's changed since the last time the
+            // Get the site version for this puzzle, so that if it's higher than the last time the
             // requester sync'ed, the requester will know to reload itself.
 
-            response.SetSiteVersion(GetSiteVersion(thisPuzzle));
+            response.SetSiteVersion(thisPuzzle.PuzzleVersion);
 
             // Decode the request.  If there are any errors, return an error response.
 
@@ -462,6 +446,7 @@ namespace ServerCore.Pages
     }
 
     [Route("{eventId}/api/Sync/{puzzleId}")]
+    [EnableCors("EnableAllOriginsPolicy")]
     public class SyncController : Controller
     {
         private readonly PuzzleServerContext context;
@@ -475,6 +460,7 @@ namespace ServerCore.Pages
         
         // POST api/Sync
         [HttpPost]
+        [EnableCors("EnableAllOriginsPolicy")]
         public async Task<IActionResult> Post(string eventId, int puzzleId, List<int> query_puzzle_ids, int? min_solve_count, string annotations,
                                               string last_sync_time)
         {
